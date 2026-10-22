@@ -79,8 +79,10 @@ export function resetAssetAllowlistOutcome(): void {
  * surfacing structured outcome and latency signals.
  *
  * Boundary semantics (documented, deterministic):
- * - Asset codes are trimmed, uppercased (mixed-case normalized), and deduplicated in first-seen
- *   order. The resulting `validAssets` list is stable and never silently reordered.
+ * - Asset codes are trimmed, uppercased (mixed-case normalized), deduplicated, and sorted
+ *   lexicographically (`A–Z`, `0–9`) so that `validAssets` matches the canonical normalized
+ *   sorted asset list returned by `parseAllowedAssetsConfig()`, `getAllowedAssets()`, and the
+ *   `/api/assets` and `/api/admin/assets` endpoints.
  * - Duplicates (including mixed-case variants of the same code) are stripped and counted;
  *   this is a `success` outcome.
  * - Empty tokens and malformed codes are treated as invalid configuration (`blocked`).
@@ -130,6 +132,8 @@ export function evaluateAssetAllowlistConfig(
       validAssets.push(normalized);
     }
   }
+
+  validAssets.sort();
 
   const latencyMs = Math.max(0, Date.now() - start);
 
