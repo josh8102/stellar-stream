@@ -968,12 +968,20 @@ async function withAddressCache(
     const cache = getCache();
     const cached = await cache.get<StreamRecord[]>(key);
     if (cached) return cached;
-    const data = fetcher();
-    await cache.set(key, data, 5);
-    return data;
   } catch {
-    return fetcher();
+    // If cache lookup fails, proceed to fetcher without caching
   }
+
+  const data = fetcher();
+
+  try {
+    const cache = getCache();
+    await cache.set(key, data, 5);
+  } catch {
+    // If cache write fails, still return the fetched data without re-running fetcher
+  }
+
+  return data;
 }
 
 app.get(
@@ -1077,7 +1085,8 @@ function isDatabaseTimeoutError(error: unknown): boolean {
     code === "ETIMEDOUT" ||
     code === "QUERY_TIMEOUT" ||
     code === "DATABASE_TIMEOUT" ||
-    /timeout|timed out|database is locked|sqlite_busy/i.test(message)
+    code === "57014" ||
+    /timeout|timed out|database is locked|sqlite_busy|sqlite_locked/i.test(message)
   );
 }
 
